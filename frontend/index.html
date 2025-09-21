@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <title>Chihuahua</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="./css/style.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="topbar-text">
+        <h1>Chihuahua Dashboard V0.2</h1>
+        <p class="muted">A.I. Driven Surveillance Cameras at People's Command !</p>
+      </div>
+      <div class="topbar-actions">
+        <button type="button" class="btn subtle" id="refresh-btn">Yenile</button>
+      </div>
+    </header>
+
+    <main class="layout">
+      <aside class="panel panel-list">
+        <div class="panel-header">
+          <h2>Devices</h2>
+          <span class="chip muted" id="device-count"></span>
+        </div>
+        <div id="device-list" class="device-list"></div>
+      </aside>
+
+      <section class="panel panel-details">
+        <div class="panel-header">
+          <h2>Selected Camera</h2>
+          <span class="panel-subtitle muted" id="selected-device-subtitle">Not selected yet</span>
+        </div>
+
+        <form id="cfg-form" class="form-body">
+          <div class="form-section">
+            <div class="form-row">
+              <label for="deviceId">Device ID</label>
+              <input id="deviceId" readonly>
+            </div>
+
+            <div id="preview-container" class="preview-container">
+              <div class="preview-header">
+                <h3>Latest JPEGs</h3>
+                <button type="button" class="btn tiny subtle" id="open-preview" disabled>Open</button>
+              </div>
+              <div class="preview-main">
+                <img id="preview-main-img" alt="Selected JPEG">
+                <div id="preview-main-placeholder" class="preview-main-placeholder">No JPEG selected yet.</div>
+              </div>
+              <div class="analysis-block">
+                <strong id="analysis-text">Analysis pending.</strong>
+                <div class="analysis-meta">
+                  <span>Ollama Host: <code id="analysis-host">-</code></span>
+                  <span>Model: <code id="analysis-model">-</code></span>
+                  <span>Prompt: <code id="analysis-prompt">-</code></span>
+                  <span>num_ctx: <code id="analysis-num-ctx">-</code></span>
+                  <span>num_predict: <code id="analysis-num-predict">-</code></span>
+                  <span>Analysis time: <code id="analysis-time">-</code></span>
+                </div>
+              </div>
+              <div id="preview-grid" class="preview-grid">
+                <div class="preview-cell"><img alt="Preview 1"></div>
+                <div class="preview-cell"><img alt="Preview 2"></div>
+                <div class="preview-cell"><img alt="Preview 3"></div>
+                <div class="preview-cell"><img alt="Preview 4"></div>
+              </div>
+              <div id="preview-placeholder" class="preview-placeholder">No JPEG available.</div>
+              <div class="preview-pager">
+                <button type="button" class="btn tiny subtle" id="preview-prev" disabled>Prev</button>
+                <span id="preview-page" class="preview-page">0 / 0</span>
+                <button type="button" class="btn tiny subtle" id="preview-next" disabled>Next</button>
+              </div>
+              <div id="last-upload" class="preview-meta muted">Last upload: unknown</div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h3>Camera Settings</h3>
+            <div class="form-grid">
+              <div class="form-row toggle">
+                <label for="whitebal">Auto White Balance (AWB)</label>
+                <input type="checkbox" id="whitebal">
+              </div>
+
+              <div class="form-row">
+                <label for="wbMode">WB Mode</label>
+                <select id="wbMode">
+                  <option value="0">Auto</option>
+                  <option value="1">Sunny</option>
+                  <option value="2">Cloudy</option>
+                  <option value="3">Office</option>
+                  <option value="4">Home</option>
+                </select>
+              </div>
+
+              <div class="form-row toggle">
+                <label for="hmirror">Horizontal Mirror (hmirror)</label>
+                <input type="checkbox" id="hmirror">
+              </div>
+
+              <div class="form-row toggle">
+                <label for="vflip">Vertical Flip (vflip)</label>
+                <input type="checkbox" id="vflip">
+              </div>
+
+              <div class="form-row">
+                <label for="brightness">Brightness (-2..2)</label>
+                <input type="number" id="brightness" min="-2" max="2" step="1">
+              </div>
+
+              <div class="form-row">
+                <label for="contrast">Contrast (-2..2)</label>
+                <input type="number" id="contrast" min="-2" max="2" step="1">
+              </div>
+
+              <div class="form-row">
+                <label for="saturation">Saturation (-2..2)</label>
+                <input type="number" id="saturation" min="-2" max="2" step="1">
+              </div>
+            </div>
+          </div>
+
+
+          <div class="form-section">
+            <h3>Advanced Sensor Controls</h3>
+            <div class="form-grid">
+              <div class="form-row">
+                <label for="sharpness">Sharpness (-2..2)</label>
+                <input type="number" id="sharpness" min="-2" max="2" step="1">
+              </div>
+              <div class="form-row">
+                <label for="gainceiling">Gain Ceiling</label>
+                <select id="gainceiling">
+                  <option value="0">2x</option>
+                  <option value="1">4x</option>
+                  <option value="2">8x</option>
+                  <option value="3">16x</option>
+                  <option value="4">32x</option>
+                  <option value="5">64x</option>
+                </select>
+              </div>
+              <div class="form-row">
+                <label for="aeLevel">AE Level (-2..2)</label>
+                <input type="number" id="aeLevel" min="-2" max="2" step="1">
+              </div>
+              <div class="form-row">
+                <label for="specialEffect">Special Effect</label>
+                <select id="specialEffect">
+                  <option value="0">None</option>
+                  <option value="1">Negative</option>
+                  <option value="2">Grayscale</option>
+                  <option value="3">Red Tint</option>
+                  <option value="4">Green Tint</option>
+                  <option value="5">Blue Tint</option>
+                  <option value="6">Sepia</option>
+                </select>
+              </div>
+              <div class="form-row toggle">
+                <label for="awbGain">AWB Gain</label>
+                <input type="checkbox" id="awbGain">
+              </div>
+              <div class="form-row toggle">
+                <label for="gainCtrl">Gain Control (AGC)</label>
+                <input type="checkbox" id="gainCtrl">
+              </div>
+              <div class="form-row toggle">
+                <label for="exposureCtrl">Exposure Control (AEC)</label>
+                <input type="checkbox" id="exposureCtrl">
+              </div>
+              <div class="form-row toggle">
+                <label for="lensCorr">Lens Correction</label>
+                <input type="checkbox" id="lensCorr">
+              </div>
+              <div class="form-row toggle">
+                <label for="rawGma">Raw Gamma</label>
+                <input type="checkbox" id="rawGma">
+              </div>
+              <div class="form-row toggle">
+                <label for="bpc">Bad Pixel Correction</label>
+                <input type="checkbox" id="bpc">
+              </div>
+              <div class="form-row toggle">
+                <label for="wpc">White Pixel Correction</label>
+                <input type="checkbox" id="wpc">
+              </div>
+              <div class="form-row toggle">
+                <label for="dcw">Downsize Quality (DCW)</label>
+                <input type="checkbox" id="dcw">
+              </div>
+              <div class="form-row toggle">
+                <label for="colorbar">Color Bar</label>
+                <input type="checkbox" id="colorbar">
+              </div>
+              <div class="form-row toggle">
+                <label for="lowLightBoost">Low Light Boost</label>
+                <input type="checkbox" id="lowLightBoost">
+              </div>
+            </div>
+          </div>
+          <div class="form-section">
+            <h3>Upload Settings</h3>
+            <div class="form-grid">
+              <div class="form-row">
+                <label for="framesize">Framesize</label>
+                <select id="framesize">
+                  <option>QQVGA</option>
+                  <option>QVGA</option>
+                  <option>CIF</option>
+                  <option>VGA</option>
+                  <option>SVGA</option>
+                  <option>XGA</option>
+                  <option>SXGA</option>
+                  <option>UXGA</option>
+                </select>
+              </div>
+
+              <div class="form-row">
+                <label for="jpegQuality">JPEG Kalitesi (5=en iyi, 63=en kotu)</label>
+                <input type="number" id="jpegQuality" min="5" max="63" step="1">
+              </div>
+
+              <div class="form-row">
+                <label for="uploadIntervalSec">Upload Interval (s)</label>
+                <input type="number" id="uploadIntervalSec" min="1" max="3600" step="1">
+              </div>
+
+              <div class="form-row toggle">
+                <label for="autoUpload">Auto Upload</label>
+                <input type="checkbox" id="autoUpload">
+              </div>
+
+              <div class="form-row">
+                <label for="uploadUrl">Upload URL</label>
+                <input id="uploadUrl" placeholder="http://&lt;PC_IP&gt;:8000/upload">
+              </div>
+
+              <div class="form-row">
+                <label for="uploadToken">Upload Token</label>
+                <input id="uploadToken" placeholder="DEV-UPLOAD-TOKEN">
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h3>A.I. API Settings</h3>
+            <div class="form-grid ai-grid">
+              <div class="form-row">
+                <label for="aiHost">Ollama Host</label>
+                <input id="aiHost" placeholder="http://localhost:11434">
+              </div>
+
+              <div class="form-row">
+                <label for="aiModel">Model</label>
+                <input id="aiModel" placeholder="qwen2.5vl:7b">
+              </div>
+
+              <div class="form-row">
+                <label for="aiNumCtx">num_ctx</label>
+                <input type="number" id="aiNumCtx" min="1" step="1">
+              </div>
+
+              <div class="form-row">
+                <label for="aiNumPredict">num_predict</label>
+                <input type="number" id="aiNumPredict" min="1" step="1">
+              </div>
+
+              <div class="form-row full-width">
+                <label for="aiPrompt">Prompt</label>
+                <textarea id="aiPrompt" rows="3" placeholder="Bu resimde ne var? {path}"></textarea>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <div class="form-actions">
+              <button type="submit" class="btn">Save and Bump Rev</button>
+            </div>
+            <div id="status"></div>
+          </div>
+        </form>
+      </section>
+    </main>
+  </div>
+
+  <script src="./js/app.js"></script>
+</body>
+</html>
+
+
