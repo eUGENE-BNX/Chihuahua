@@ -1,8 +1,10 @@
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
+import requests
+from urllib.parse import urlparse, urlunparse
 from pydantic import BaseModel, Field
 
-from ..core.db import list_devices, get_device, update_config, bump_rev
+from ..core.db import list_devices, get_device, update_config
 from ..core.config import (
     DEFAULT_AI_HOST,
     DEFAULT_AI_MODEL,
@@ -56,7 +58,41 @@ def _bool_or_default(value, default):
         return default
 
 
-def _device_row(row):
+
+def _build_ai_health_url(host: str) -> str | None:
+    if not host:
+        return None
+    host = host.strip()
+    if not host:
+        return None
+    if not host.startswith('http://') and not host.startswith('https://'):
+        host = 'http://' + host
+    parsed = urlparse(host)
+    if not parsed.netloc:
+        return None
+    path = (parsed.path or '').rstrip('/')
+    if path.endswith('/api'):
+        health_path = f'{path}/tags'
+    elif path.endswith('/api/generate'):
+        health_path = path[: -len('/generate')] + '/tags'
+    elif '/api/generate' in path:
+        base = path.split('/api/generate')[0] + '/api'
+        health_path = base + '/tags'
+    else:
+        health_path = f'{path}/api/tags' if path else '/api/tags'
+    parsed = parsed._replace(path=health_path, params='', query='', fragment='')
+    return urlunparse(parsed)
+
+def _check_ai_status(host: str) -> bool:
+    url = _build_ai_health_url(host)
+    if not url:
+        return False
+    try:
+        resp = requests.get(url, timeout=2)
+    except Exception:
+        return False
+    return resp.ok
+def _device_row(row, include_ai_status: bool = False):
     stored_urls = _row_value(row, "last_img_urls")
     urls = [u for u in str(stored_urls).split("\n") if u] if stored_urls else []
     row_int = lambda key, default: _int_or_default(_row_value(row, key), default)
@@ -107,7 +143,7 @@ def _device_row(row):
         "rssi": row["rssi"],
         "model": row["model"],
         "lastSeen": row["last_seen"],
-        "rev": row["config_rev"],
+
         "framesize": row["framesize"],
         "jpegQuality": row_int("jpeg_quality", 15),
         "uploadIntervalSec": row_int("upload_interval_sec", 10),
@@ -144,10 +180,10 @@ def _device_row(row):
         "colorbar": colorbar,
         "specialEffect": special_effect,
         "lowLightBoost": low_light,
+        "aiReachable": _check_ai_status(ai_host) if include_ai_status else None,
     }
 
 
-@router.get("/devices")
 @router.get("/devices")
 def devices():
     rows = list_devices()
@@ -159,8 +195,7 @@ def device(device_id: str):
     row = get_device(device_id)
     if not row:
         raise HTTPException(status_code=404, detail="Device not found")
-    return _device_row(row)
-
+    return _device_row(row, include_ai_status=True)
 
 class UpdateConfigBody(BaseModel):
     framesize: str | None = Field(None, description="QQVGA,QVGA,CIF,VGA,SVGA,XGA,SXGA,UXGA")
@@ -195,7 +230,6 @@ class UpdateConfigBody(BaseModel):
     aiPrompt: str | None = None
     aiNumCtx: int | None = Field(None, ge=1)
     aiNumPredict: int | None = Field(None, ge=1)
-    bumpRev: bool = True
 
 
 @router.post("/device/{device_id}/config")
@@ -272,8 +306,7 @@ def update_device_config(device_id: str, body: UpdateConfigBody):
 
     if patch:
         update_config(device_id, patch)
-    new_rev = bump_rev(device_id) if body.bumpRev else row["config_rev"]
-    return {"status": "ok", "rev": new_rev}
+    return {"status": "ok"}
 
 
 

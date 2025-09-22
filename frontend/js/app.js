@@ -30,6 +30,7 @@ const lastUploadEl = document.getElementById("last-upload");
 const refreshBtn = document.getElementById("refresh-btn");
 const deviceCountEl = document.getElementById("device-count");
 const selectedDeviceSubtitle = document.getElementById("selected-device-subtitle");
+const aiIndicatorEl = document.getElementById("ai-indicator");
 const openPreviewBtn = document.getElementById("open-preview");
 const analysisTextEl = document.getElementById("analysis-text");
 const analysisHostEl = document.getElementById("analysis-host");
@@ -118,11 +119,26 @@ function updateSelectedSubtitle(meta) {
   if (!selectedDeviceSubtitle) return;
   if (!meta) {
     selectedDeviceSubtitle.textContent = "Henuz secilmedi";
+    updateAiIndicator(null);
     return;
   }
   const seen = formatDateTime(meta.lastSeen) || "-";
-  const rev = meta.rev ?? "-";
-  selectedDeviceSubtitle.textContent = `ID ${meta.deviceId} | Rev ${rev} | Son gorulme ${seen}`;
+  selectedDeviceSubtitle.textContent = "ID " + meta.deviceId + " | Son gorulme " + seen;
+  updateAiIndicator(meta.aiReachable);
+}
+
+function updateAiIndicator(status) {
+  if (!aiIndicatorEl) return;
+  if (status === null || status === undefined) {
+    aiIndicatorEl.classList.add("hidden");
+    aiIndicatorEl.classList.add("offline");
+    aiIndicatorEl.setAttribute("title", "A.I. katmani baglanti durumu bilinmiyor");
+    return;
+  }
+  aiIndicatorEl.classList.remove("hidden");
+  const online = Boolean(status);
+  aiIndicatorEl.classList.toggle("offline", !online);
+  aiIndicatorEl.setAttribute("title", online ? "A.I. katmani bagli" : "A.I. katmani erisilemiyor");
 }
 
 function updateAnalysis(meta) {
@@ -140,19 +156,19 @@ function updateAnalysis(meta) {
   const numPredict = meta?.aiNumPredict ?? "-";
 
   analysisHostEl.textContent = host;
-  analysisHostEl.title = host !== "-" ? host : "";
+  analysisHostEl.title = host != "-" ? host : "";
 
   analysisModelEl.textContent = model;
-  analysisModelEl.title = model !== "-" ? model : "";
+  analysisModelEl.title = model != "-" ? model : "";
 
   analysisPromptEl.textContent = prompt;
-  analysisPromptEl.title = prompt !== "-" ? prompt : "";
+  analysisPromptEl.title = prompt != "-" ? prompt : "";
 
   analysisNumCtxEl.textContent = numCtx;
-  analysisNumCtxEl.title = numCtx !== "-" ? String(numCtx) : "";
+  analysisNumCtxEl.title = numCtx != "-" ? String(numCtx) : "";
 
   analysisNumPredictEl.textContent = numPredict;
-  analysisNumPredictEl.title = numPredict !== "-" ? String(numPredict) : "";
+  analysisNumPredictEl.title = numPredict != "-" ? String(numPredict) : "";
 
   analysisTimeEl.textContent = analysisTime || "-";
   analysisTimeEl.title = analysisTime || "";
@@ -281,7 +297,7 @@ function createDeviceCard(device) {
       <h3 data-field="deviceId"></h3>
       <div class="device-card-badges">
         <span class="chip chip-status" data-field="status"></span>
-        <span class="chip chip-rev" data-field="rev"></span>
+        <span class="ai-chip" data-field="ai"></span>
       </div>
     </div>
     <div class="device-meta">
@@ -341,7 +357,23 @@ function updateDeviceCard(card, device) {
     refs.status.classList.toggle("offline", offline);
     refs.status.classList.toggle("online", !offline);
   }
-  if (refs.rev) refs.rev.textContent = `Rev ${device.rev ?? "-"}`;
+  if (refs.ai) {
+    const reachable = device.aiReachable;
+    if (reachable === undefined || reachable === null) {
+      refs.ai.classList.add("hidden");
+      refs.ai.classList.add("offline");
+      refs.ai.style.display = "none";
+      refs.ai.title = "";
+    } else {
+      refs.ai.classList.remove("hidden");
+      refs.ai.style.display = "inline-flex";
+      refs.ai.textContent = "AI";
+      const isOnline = Boolean(reachable);
+      refs.ai.classList.toggle("offline", !isOnline);
+      refs.ai.title = isOnline ? "A.I. katmani bagli" : "A.I. katmani erisilemiyor";
+    }
+  }
+  }
   if (refs.ip) refs.ip.textContent = `IP: ${device.ip || "-"}`;
   if (refs.rssi) refs.rssi.textContent = `RSSI: ${device.rssi ?? "-"}`;
   if (refs.auto) refs.auto.textContent = `Auto: ${device.autoUpload ? "Acik" : "Kapali"}`;
@@ -551,7 +583,6 @@ form.addEventListener("submit", async (ev) => {
     uploadIntervalSec: parseIntSafe($("uploadIntervalSec").value),
     autoUpload: $("autoUpload").checked,
     uploadUrl: $("uploadUrl").value.trim(),
-    bumpRev: true,
     whitebal: $("whitebal").checked,
     wbMode: parseIntSafe($("wbMode").value),
     hmirror: $("hmirror").checked,
@@ -595,7 +626,7 @@ form.addEventListener("submit", async (ev) => {
 
   try {
     const resp = await postJSON(`/admin/api/device/${id}/config`, body);
-    statusEl.innerHTML = `<span class=\"ok\">Kaydedildi. Yeni Rev: ${resp.rev}</span>`;
+    statusEl.innerHTML = `<span class=\"ok\">Kaydedildi.</span>`;
     await refreshDevices();
   } catch (e) {
     statusEl.innerHTML = `<span class=\"err\">Kaydetme hatasi: ${e.message}</span>`;
@@ -603,6 +634,7 @@ form.addEventListener("submit", async (ev) => {
 });
 
 refreshDevices();
+
 
 
 

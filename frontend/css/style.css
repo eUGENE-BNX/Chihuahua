@@ -1,4 +1,4 @@
-﻿:root {
+:root {
   color-scheme: dark;
   --bg:#070707;
   --surface:#121212;
@@ -64,7 +64,8 @@ button { font:inherit; color:inherit; background:none; border:none; }
 .device-actions { display:flex; align-items:center; gap:10px; }
 .device-url { font-size:12px; color:var(--text-muted); max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-left:auto; }
 .chip { padding:4px 12px; border-radius:999px; background:rgba(163,163,163,0.12); font-size:12px; color:var(--text-muted); }
-.chip-rev { background:rgba(40,220,110,0.18); color:var(--accent); }
+.ai-chip { display:none; align-items:center; justify-content:center; padding:4px 10px; border-radius:999px; background:rgba(40,220,110,0.1); border:1px solid rgba(40,220,110,0.25); color:var(--accent); font-size:12px; font-weight:600; }
+.ai-chip.offline { color:var(--text-muted); border-color:rgba(120,120,120,0.28); background:rgba(120,120,120,0.1); }
 .chip-status { background:rgba(10,220,10,0.18); color:var(--success); }
 .chip-status.online { background:rgba(10,220,10,0.18); color:var(--success); }
 .chip-status.offline { background:rgba(240,0,0,0.18); color:var(--danger); }
@@ -79,6 +80,8 @@ button { font:inherit; color:inherit; background:none; border:none; }
 .btn[disabled] { opacity:0.35; pointer-events:none; }
 form { margin:0; }
 .form-body { display:flex; flex-direction:column; gap:28px; }
+.section-card { background:rgba(40,220,110,0.05); border:1px solid rgba(40,220,110,0.18); border-radius:16px; padding:20px; }
+.section-card .form-grid { margin-top:6px; }
 .form-section { display:flex; flex-direction:column; gap:18px; }
 .form-section h3 { margin:0; font-size:16px; font-weight:600; color:var(--text); }
 .form-grid { display:grid; gap:18px; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); }

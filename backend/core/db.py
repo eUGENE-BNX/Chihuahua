@@ -135,14 +135,5 @@ def update_config(device_id: str, cfg: Dict[str, Any]):
         conn.commit()
     conn.close()
 
-def bump_rev(device_id: str) -> int:
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute("UPDATE devices SET config_rev = COALESCE(config_rev,1) + 1 WHERE device_id=?", (device_id,))
-    cur.execute("SELECT config_rev FROM devices WHERE device_id=?", (device_id,))
-    rev = cur.fetchone()[0]
-    conn.commit()
-    conn.close()
-    return rev
 
 

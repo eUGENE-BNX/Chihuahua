@@ -2,6 +2,8 @@ from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 import time
+import requests
+from urllib.parse import urlparse, urlunparse
 
 from ..core.config import (
     BACKEND_TOKEN,
@@ -62,6 +64,41 @@ def _bool_or_default(value, default):
     except (TypeError, ValueError):
         return default
 
+
+def _build_ai_health_url(host: str) -> str | None:
+    if not host:
+        return None
+    host = host.strip()
+    if not host:
+        return None
+    if not host.startswith('http://') and not host.startswith('https://'):
+        host = 'http://' + host
+    parsed = urlparse(host)
+    if not parsed.netloc:
+        return None
+    path = (parsed.path or '').rstrip('/')
+    if path.endswith('/api'):
+        health_path = f'{path}/tags'
+    elif path.endswith('/api/generate'):
+        health_path = path[: -len('/generate')] + '/tags'
+    elif '/api/generate' in path:
+        base = path.split('/api/generate')[0] + '/api'
+        health_path = base + '/tags'
+    else:
+        health_path = f'{path}/api/tags' if path else '/api/tags'
+    parsed = parsed._replace(path=health_path, params='', query='', fragment='')
+    return urlunparse(parsed)
+
+def _check_ai_status(host: str) -> bool:
+    url = _build_ai_health_url(host)
+    if not url:
+        return False
+    try:
+        resp = requests.get(url, timeout=2)
+    except Exception:
+        return False
+    return resp.ok
+
 router = APIRouter(prefix="/api", tags=["device"])
 
 class RegisterBody(BaseModel):
@@ -99,8 +136,8 @@ async def register(req: Request, body: RegisterBody):
     return JSONResponse({"status":"ok"})
 
 @router.get("/config")
-async def get_config(req: Request, deviceId: str, rev: int = 0):
-    require_bearer(req, BACKEND_TOKEN)
+@router.get("/config")
+async def get_config(req: Request, deviceId: str):
     row = get_device(deviceId)
     base_url = str(req.base_url).rstrip("/")
 
@@ -176,7 +213,6 @@ async def get_config(req: Request, deviceId: str, rev: int = 0):
     auto_upload = row_bool("auto_upload", True)
 
     data = {
-        "rev": row["config_rev"] or 1,
         "framesize": row["framesize"] or "VGA",
         "jpegQuality": row_int("jpeg_quality", 15),
         "uploadIntervalSec": row_int("upload_interval_sec", 10),
@@ -209,6 +245,7 @@ async def get_config(req: Request, deviceId: str, rev: int = 0):
         "aiPrompt": ai_prompt,
         "aiNumCtx": ai_num_ctx,
         "aiNumPredict": ai_num_predict,
+        "aiReachable": _check_ai_status(ai_host),
     }
     return JSONResponse(data)
 
